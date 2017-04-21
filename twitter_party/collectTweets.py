@@ -6,8 +6,10 @@ import pandas as pd
 #######
 
 # To Do:
-# account for users following >5k. 
-# parse >100 id - sn requests
+# account for users following >5k.
+# write code to trim id list
+# parse >100 id - sn requests (if necessary)
+# clean up functions and naming and formatting.
 
 def getTweeters(terms,party,count=100):
     # Given a list of terms
@@ -64,7 +66,7 @@ def store_SNs(df):
     
     dfNew.to_csv(fil, index=False)
 
-def identifyPoliticalAccounts():
+def identifyPoliticalAccounts(count=100):
     # Get list of political Accounts and store them in a file.
 	
 	# What terms should I use?
@@ -74,17 +76,20 @@ def identifyPoliticalAccounts():
     demFlags = ['resist','theresistance','singlepayer']
     repFlags = ['maga','tcot','prolife']
     
-    demAccounts = getTweeters(demFlags,1,3)
-    repAccounts = getTweeters(repFlags,2,3)
+    demAccounts = getTweeters(demFlags,1,count)
+    repAccounts = getTweeters(repFlags,2,count)
     
     store_SNs(demAccounts)
     store_SNs(repAccounts)
 
 
-def getFollowers(df): 
+def getFollowers(): 
     t = tweetLogIn()
     # use ID's since it's much faster apparently, and then just convert the relevant ones to screen names.
     # get's 5k id's at a time. Let's assume that's enough for v0.
+    
+    fil = '{0}/twitter_party/raw/sns.csv'.format(os.path.expanduser("~"))
+    df = pd.read_csv(fil,delimiter=',')
     
     for index, row in df.iterrows():
         fil2 = '{0}/twitter_party/raw/{1}.csv'.format(os.path.expanduser("~"),row['SN'])
@@ -112,25 +117,18 @@ if __name__ == '__main__':
 	# t.application.rate_limit_status()
 	
     # get some accounts and put them in a file
-    identifyPoliticalAccounts()
+    identifyPoliticalAccounts(count=100)
     
-    # for each account, make a file with a list of their followers
-    fil = '{0}/twitter_party/raw/sns.csv'.format(os.path.expanduser("~"))
-    df = pd.read_csv(fil,delimiter=',')
-    getFollowers(df)
+    # for each account, make a file with a list of their followers' ids
+    getFollowers()
     
     # get who these users follow
     # I get ~1 request per minute? That seems pretty restrictive?
-    #test = ['Hasty_Data']
-    friendsD = getFollowers(demAccounts)
-    friendsR = getFollowers(repAccounts)
     
-    # trim this list of ids 
-    
-    ids = friends['Hasty_Data']
-
+    # trim this list of ids to one's that occur most frequently
+    # trim_in_some_way()
     # then convert the id's to sn's
-    convertToScreenNames(something)
+    #convertToScreenNames(something)
     
     # then convert this to a dataframe as observation and features.
     
