@@ -9,10 +9,10 @@ import pandas as pd
 # account for users following >5k. 
 # parse >100 id - sn requests
 
-def getTweeters(terms):
-    # Return screen names from users tweeting on these terms!
-    # I want tweets with identifying twitter feeds
-    # in english and in US.
+def getTweeters(terms,party,count=100):
+    # Given a list of terms
+    # Return dataframe of screen names from users tweeting those terms
+    # currently specifying English language but not US location
 
     t = tweetLogIn()
     
@@ -25,19 +25,22 @@ def getTweeters(terms):
     # 'description' - profile
     # screen_name
     
-    SNs = []
+    df = pd.DataFrame(columns=['SN','Term','Party'])
     for d in terms:
-        bigTweetList = t.search.tweets(q="#"+d,count=100)
+        bigTweetList = t.search.tweets(q="#"+d,count=count)
         for k in xrange(len(bigTweetList['statuses'])):
             if bigTweetList['statuses'][k]['lang']=='en':
-                SNs.append(bigTweetList['statuses'][k]['user']['screen_name'])
+                
+                if bigTweetList['statuses'][k]['user']['screen_name'] not in df.SN.values:
+                    df = df.append({'SN':bigTweetList['statuses'][k]['user']['screen_name'],'Term':d,'Party':party},ignore_index=True)
+                #SNs.append(bigTweetList['statuses'][k]['user']['screen_name'])
                 #print bigTweetList['statuses'][k]['text'] 
 
     # make lists unique.
     # use a small list to identify key variables - followers. other things?
     
-    SNs = list(set(SNs))
-    return SNs
+    #SNs = list(set(SNs))
+    return df
     
 
 def tweetLogIn():
@@ -47,31 +50,49 @@ def tweetLogIn():
         retry=True)
     return t
 
-def tweetCollect():
+def store_SNs(df): 
+    # since I'll get locked out a bunch, I might as well write down SNs
+    # find last entry in data file
+    
+    fil = '{0}/twitter_party/raw/sns.csv'.format(os.path.expanduser("~"))
+    if os.path.isfile(fil):
+        dfOld = pd.read_csv(fil,delimiter=',')
+        df2 = df.append(dfOld, ignore_index=True)
+        dfNew = df2.drop_duplicates('SN')
+    else:
+        dfNew = df
+    
+    dfNew.to_csv(fil, index=False)
 
-    t = tweetLogIn()
+def identifyPoliticalAccounts():
+    # Get list of political Accounts and store them in a file.
+	
+	# What terms should I use?
+    # this definition is very arbitrary! Something unsupervised might be more robust.
+    # political/idealogical/issue/cultural?
+    # 'liberal','democrat', 'republican','trump', 'gop'
+    demFlags = ['resist','theresistance','singlepayer']
+    repFlags = ['maga','tcot','prolife']
+    
+    demAccounts = getTweeters(demFlags,1,3)
+    repAccounts = getTweeters(repFlags,2,3)
+    
+    store_SNs(demAccounts)
+    store_SNs(repAccounts)
 
-    #t.statuses.update(status='a tweet')
 
-def tweetUserCollect(user='Hasty_Data'):
-    # go get some tweets from a specific user
-    t = tweetLogIn()
-    t.statuses.user_timeline(screen_name=user)
-
-def tweetMyTimeline():
-    t = tweetLogIn()
-    temp = t.statuses.home_timeline()
-
-def getFollowers(screennames): 
+def getFollowers(df): 
     t = tweetLogIn()
     # use ID's since it's much faster apparently, and then just convert the relevant ones to screen names.
     # get's 5k id's at a time. Let's assume that's enough for v0.
-    friends={}
-    for sn in screennames:
-        tmp = t.friends.ids(screen_name=sn)
-        friends[sn] = tmp['ids']
+    
+    for index, row in df.iterrows():
+        fil2 = '{0}/twitter_party/raw/{1}.csv'.format(os.path.expanduser("~"),row['SN'])
+        if not os.path.isfile(fil2):
+            tmp = t.friends.ids(screen_name=row['SN'])
+            dftemp = pd.DataFrame({'ids':tmp['ids']})
+            dftemp.to_csv(fil2, header=False,index=False)
 
-    return friends
 
 def convertToScreenNames(ids): 
     t = tweetLogIn()
@@ -86,21 +107,17 @@ def convertToScreenNames(ids):
     return SNs
 
 
-
 if __name__ == '__main__':
 	# while testing:
-	t.application.rate_limit_status()
+	# t.application.rate_limit_status()
 	
-	# Find terms that identify individuals
-    # this definition is very arbitrary! Something unsupervised might be more robust.
-    # political/idealogical/issue/cultural?
+    # get some accounts and put them in a file
+    identifyPoliticalAccounts()
     
-    # 'liberal','democrat', 'republican','trump', 'gop'
-    demFlags = ['resist','theresistance','hrc','singlepayer']
-    repFlags = ['maga','tcot','prolife']
-    
-    demAccounts = getTweeters(demFlags)
-    repAccounts = getTweeters(repFlags)
+    # for each account, make a file with a list of their followers
+    fil = '{0}/twitter_party/raw/sns.csv'.format(os.path.expanduser("~"))
+    df = pd.read_csv(fil,delimiter=',')
+    getFollowers(df)
     
     # get who these users follow
     # I get ~1 request per minute? That seems pretty restrictive?
