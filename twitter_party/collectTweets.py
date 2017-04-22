@@ -1,5 +1,7 @@
-import ConfigParser, datetime, twitter, sys, os
+import ConfigParser, datetime, twitter, sys, os, glob
 import pandas as pd
+import numpy as np
+
 
 #############
 # Collect some tweets!
@@ -110,6 +112,28 @@ def convertToScreenNames(ids):
         SNs.append(x['screen_name'])
 
     return SNs
+
+
+
+def identifyCommonFollowers(): 
+    filenames = glob.glob("{}/twitter_party/raw/*.csv".format(os.path.expanduser("~")))
+    filenames.remove("{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~")))
+
+    ids = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
+    unique, counts = np.unique(ids, return_counts=True)
+    #id_counts = dict(zip(unique, counts))
+    id_counts = pd.DataFrame({'ids':unique,'counts':counts})
+    
+    #cut = int(len(filenames)/100)
+    #id_use = id_counts.ix[id_counts['counts']>= cut]
+    
+    # users.lookup can do 900 before limit.
+    id_sorted = id_counts.sort_values(by=['counts'],ascending=False)[0:900]
+    
+    # who is 25073877. vom. vom. vom.
+
+    return SNs
+
 
 
 if __name__ == '__main__':
