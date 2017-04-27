@@ -1,4 +1,4 @@
-import ConfigParser, datetime, twitter, sys, os, glob
+import ConfigParser, datetime, twitter, sys, os, glob, re
 import pandas as pd
 import numpy as np
 
@@ -8,10 +8,10 @@ import numpy as np
 #######
 
 # To Do:
-# account for users following >5k.
-# write code to trim id list
+# account for users following >5k and 0.
 # parse >100 id - sn requests (if necessary)
-# clean up functions and naming and formatting.
+# pep8?
+
 
 def getTweeters(terms,party,count=100):
     # Given a list of terms
@@ -54,7 +54,7 @@ def tweetLogIn():
         retry=True)
     return t
 
-def store_SNs(df): 
+def storeSNs(df): 
     # since I'll get locked out a bunch, I might as well write down SNs
     # find last entry in data file
     
@@ -81,8 +81,8 @@ def identifyPoliticalAccounts(count=100):
     demAccounts = getTweeters(demFlags,1,count)
     repAccounts = getTweeters(repFlags,2,count)
     
-    store_SNs(demAccounts)
-    store_SNs(repAccounts)
+    storeSNs(demAccounts)
+    storeSNs(repAccounts)
 
 
 def getFollowers(): 
@@ -102,38 +102,55 @@ def getFollowers():
 
 
 def convertToScreenNames(ids): 
+    # take a list of ids and return a dict with screen names
+    # One of the top 500 followed accounts actuallly no longer exists
+    # need to be able to account for this.
     t = tweetLogIn()
+    
+    # If >100 need to split up
+    SNs = {}
+    limit = 100
+    id_chunks = [ids[x:x+limit] for x in xrange(0, len(ids), limit)]
 
-    # right now, take a list and return a list.
-    # If List>100 need to parse out I think
-    SNs = []
-    tmp = t.users.lookup(user_id=','.join(str(i) for i in ids))
-    for x in tmp:
-        SNs.append(x['screen_name'])
+    for id_sub in id_chunks:
+        tmp = t.users.lookup(user_id=','.join(str(i) for i in id_sub))
+        for x in tmp:
+            SNs[x['id']] = x['screen_name']
+            #SNs.append(x['screen_name'])
 
     return SNs
 
 
-
-def identifyCommonFollowers(): 
+def buildFollowerDataset(): 
     filenames = glob.glob("{}/twitter_party/raw/*.csv".format(os.path.expanduser("~")))
     filenames.remove("{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~")))
-
-    ids = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
-    unique, counts = np.unique(ids, return_counts=True)
-    #id_counts = dict(zip(unique, counts))
-    id_counts = pd.DataFrame({'ids':unique,'counts':counts})
     
-    #cut = int(len(filenames)/100)
-    #id_use = id_counts.ix[id_counts['counts']>= cut]
+    # get user screen name from filename
+    regex = re.compile('raw/(.*)\.csv')
+    sns = [m.group(1) for l in filenames for m in [regex.search(l)] if m]
+
+    # get most commonly followed id's
+    ids_followed = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
+    unique, counts = np.unique(ids_followed, return_counts=True)
+    id_counts_followed = pd.DataFrame({'ids':unique,'counts':counts})
     
     # users.lookup can do 900 before limit.
-    id_sorted = id_counts.sort_values(by=['counts'],ascending=False)[0:900]
+    limit = 900
+    id_sorted_followed = id_counts_followed.sort_values(by=['counts'],ascending=False)[0:limit]
+    #id_np_followed = np.array(id_sorted_followed['ids']) #I want to limit it to those with valid sn
+    sn_followed = convertToScreenNames(id_sorted_followed['ids'].tolist())
+    id_np_followed = np.array(sn_followed.keys())
     
-    # who is 25073877. vom. vom. vom.
+    # create input dataframe
+    df = pd.DataFrame(columns=sn_followed.values(), index=sns)
+    for i, f in enumerate(filenames):
+        temp = np.genfromtxt(f,delimiter=',',dtype='|S32')
+        inds = np.where(np.in1d(id_np_followed,temp))[0]
+        row = np.zeros(len(sn_followed))
+        row[inds] = 1
+        df.iloc[i] = row
 
-    return SNs
-
+    return df
 
 
 if __name__ == '__main__':
@@ -146,14 +163,7 @@ if __name__ == '__main__':
     # for each account, make a file with a list of their followers' ids
     getFollowers()
     
-    # get who these users follow
-    # I get ~1 request per minute? That seems pretty restrictive?
+    # now get most common followers from users and create a dataset for modeling.
+    df = buildFollowerDataset()
     
-    # trim this list of ids to one's that occur most frequently
-    # trim_in_some_way()
-    # then convert the id's to sn's
-    #convertToScreenNames(something)
-    
-    # then convert this to a dataframe as observation and features.
-    
-    
+
