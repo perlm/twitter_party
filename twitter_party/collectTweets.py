@@ -55,9 +55,7 @@ def tweetLogIn():
     return t
 
 def storeSNs(df): 
-    # since I'll get locked out a bunch, I might as well write down SNs
-    # find last entry in data file
-    
+    # This file stores other info about 
     fil = '{0}/twitter_party/raw/sns.csv'.format(os.path.expanduser("~"))
     if os.path.isfile(fil):
         dfOld = pd.read_csv(fil,delimiter=',')
@@ -79,7 +77,7 @@ def identifyPoliticalAccounts(count=100):
     repFlags = ['maga','tcot','prolife']
     
     demAccounts = getTweeters(demFlags,1,count)
-    repAccounts = getTweeters(repFlags,2,count)
+    repAccounts = getTweeters(repFlags,0,count)
     
     storeSNs(demAccounts)
     storeSNs(repAccounts)
@@ -129,7 +127,7 @@ def buildFollowerDataset():
     regex = re.compile('raw/(.*)\.csv')
     sns = [m.group(1) for l in filenames for m in [regex.search(l)] if m]
 
-    # get most commonly followed id's
+    # get most commonly followed id's - this doesn't resample to get even 50-50, so it's slanted
     ids_followed = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
     unique, counts = np.unique(ids_followed, return_counts=True)
     id_counts_followed = pd.DataFrame({'ids':unique,'counts':counts})
@@ -152,18 +150,22 @@ def buildFollowerDataset():
 
     return df
 
+def saveProcessedData(df): 
+    df.to_csv("{}/twitter_party/data/dataframe.csv".format(os.path.expanduser("~")), index=True)
+
 
 if __name__ == '__main__':
 	# while testing:
 	# t.application.rate_limit_status()
 	
     # get some accounts and put them in a file
-    identifyPoliticalAccounts(count=100)
+    #identifyPoliticalAccounts(count=100)
     
     # for each account, make a file with a list of their followers' ids
-    getFollowers()
+    #getFollowers()
     
     # now get most common followers from users and create a dataset for modeling.
     df = buildFollowerDataset()
     
+    saveProcessedData(df)
 
