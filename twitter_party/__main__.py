@@ -1,6 +1,5 @@
 from collectTweets import *
 
-
 #######################
 # This is the master script which will call functions from the other scripts.
 # Will setup to get new data, scrape, model, and publish.

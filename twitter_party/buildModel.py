@@ -186,6 +186,10 @@ def processData(df,scaler=None):
 def readDependentData():
 	file = "{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~"))
 	df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
+	
+    # limit it to dem/rep sample accounts and not test accounts
+    df = df.loc[df['Party'].isin([0,1])]	
+	
 	return df
 	
 	

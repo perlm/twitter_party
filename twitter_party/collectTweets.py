@@ -130,11 +130,14 @@ def buildFollowerDataset():
     file = "{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~"))
     df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
     
+    # limit it to dem/rep sample accounts and not test accounts
+    df = df.loc[df['Party'].isin([0,1])]
+    
     # limit to accounts with followers procured
     df_2 = df[df.index.isin(sns)]
     
-    # df_2.Party.value_counts()
     # downsample to get even party count
+    # df_2.Party.value_counts()
     if sum(df_2['Party']==1) > sum(df_2['Party']==0):
         less = 0
         more = 1
@@ -198,6 +201,13 @@ def buildFollowerDataset():
 def saveProcessedData(df): 
     df.to_csv("{}/twitter_party/data/dataframe.csv".format(os.path.expanduser("~")), index=True)
 
+
+def identifyTestAccounts(Term,count=100):
+    # Get list of test Accounts and store them in a file.
+    testAccounts = getTweeters([Term],3,count)
+    storeSNs(testAccounts)
+
+
 if __name__ == '__main__':
 	# while testing:
 	# t.application.rate_limit_status()
@@ -211,5 +221,8 @@ if __name__ == '__main__':
     # now get most common followers from users and create a dataset for modeling.
     #df = buildFollowerDataset()
     #saveProcessedData(df)
-
     # model built. Move onto testing.
+    print 'hello'
+    
+    
+    
