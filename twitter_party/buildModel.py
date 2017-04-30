@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing, feature_extraction, linear_model, metrics, model_selection, ensemble
-import math, glob, datetime, os
+import math, glob, datetime, os, pickle
 import matplotlib.pyplot as plt
 
 
@@ -122,8 +122,10 @@ def buildRandomForest(X_scaled,Y,X_fix):
     
     importances = list(rf.feature_importances_)
     factors = list(X_fix.columns.values)
-    for i,f in enumerate(factors):
-        print f,"\t", importances[i]
+    deets = pd.DataFrame({'importances':importances,'factors':factors})
+    print deets.sort_values(by=['importances'],ascending=[False]).head(10)
+    #for i,f in enumerate(factors):
+    #    print f,"\t", importances[i]
     return rf
 
 
@@ -145,10 +147,17 @@ def processData(df,scaler=None):
     # shows that the sample is not, so downsample to get to 50/50.
     # this assumes 0>1 in sample. could make more robust? or just add if statement.
 
-    indices = np.where(df[['Party']] == 0)[0]
+    # downsample
+    if sum(df['Party']==1) > sum(df['Party']==0):
+        less = 0
+        more = 1
+    else:
+        less = 1
+        more = 0        
+    indices = np.where(df[['Party']] == more)[0]
     rng = np.random
     rng.shuffle(indices)
-    n = sum(df['Party']==1)
+    n = sum(df['Party']==less)
     df_downsample = df.drop(df.index[indices[n:]])
 
     # df_downsample.Party.value_counts()
@@ -198,12 +207,17 @@ if __name__ == '__main__':
     #model_lr = buildLogisticModel(X_scaled,Y,X_fix,optimize=True)
     #y_probs_lr = predict(X_scaled,model_lr)
     
-    # rf is slightly more accurate, but slightly lower AUC.
+    # rf is slightly more accurate, but slightly lower AUC, well not really.
     model_rf = buildRandomForest(X_scaled,Y,X_fix)
-    y_probs_rf = predict(X_scaled,model_rf)
+    df['y_probs_rf'] = predict(X_scaled,model_rf)
+
+    # save model to file.
+    pickle.dump(model_rf,open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"w"))
 
     # histogram for funsies.
-    #plt.hist(y_probs_rf, 50, normed=1, facecolor='green', alpha=0.75)
+    #plt.hist(y_probs_rf, 50, normed=1, facecolor='blue', alpha=0.75)
+    #df['y_probs_rf'].hist(bins=50,normed=1,facecolor='blue',alpha=0.75)
+    #df['y_probs_rf'].hist(by=df['Term'],sharex=True,bins=50,normed=1,facecolor='blue',alpha=0.75)
 
     # apply it to new pop!
 

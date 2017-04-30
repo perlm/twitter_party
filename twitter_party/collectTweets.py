@@ -120,15 +120,58 @@ def convertToScreenNames(ids):
 
 
 def buildFollowerDataset(): 
-    filenames = glob.glob("{}/twitter_party/raw/*.csv".format(os.path.expanduser("~")))
-    filenames.remove("{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~")))
-    
-    # get user screen name from filename
+    # get sns with followers procured
+    csvs = glob.glob("{}/twitter_party/raw/*.csv".format(os.path.expanduser("~")))
+    csvs.remove("{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~")))
     regex = re.compile('raw/(.*)\.csv')
-    sns = [m.group(1) for l in filenames for m in [regex.search(l)] if m]
+    sns = [m.group(1) for l in csvs for m in [regex.search(l)] if m]
 
-    # get most commonly followed id's - this doesn't resample to get even 50-50, so it's slanted
-    ids_followed = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
+    # get df with party,
+    file = "{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~"))
+    df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
+    
+    # limit to accounts with followers procured
+    df_2 = df[df.index.isin(sns)]
+    
+    # df_2.Party.value_counts()
+    # downsample to get even party count
+    if sum(df_2['Party']==1) > sum(df_2['Party']==0):
+        less = 0
+        more = 1
+    else:
+        less = 1
+        more = 0        
+    indices = np.where(df_2[['Party']] == more)[0]
+    rng = np.random
+    rng.shuffle(indices)
+    n = sum(df_2['Party']==less)
+    df_downsample = df_2.drop(df_2.index[indices[n:]])
+
+    # df_downsample.Party.value_counts()
+    
+    #filenames = glob.glob("{}/twitter_party/raw/*.csv".format(os.path.expanduser("~")))
+    #filenames.remove("{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~")))
+    filenames = [ "{}/twitter_party/raw/{}.csv".format(os.path.expanduser("~"),f) for f in df_downsample.index.tolist() ]
+    # get user screen name from filename
+    #regex = re.compile('raw/(.*)\.csv')
+    #sns = [m.group(1) for l in filenames for m in [regex.search(l)] if m]
+
+    # crashes for empty files   
+    #ids_followed = np.concatenate([np.genfromtxt(f,delimiter=',',dtype='|S32') for f in filenames])
+
+    # this ignores empty files
+    ids_followed = None
+    for f in filenames:
+        A = np.genfromtxt(f,delimiter=',',dtype='|S32')
+        if ids_followed is None:
+            ids_followed = A
+        else:
+            try:
+                ids_followed = np.concatenate([ids_followed,A])
+            except:
+                #print f
+                pass
+        
     unique, counts = np.unique(ids_followed, return_counts=True)
     id_counts_followed = pd.DataFrame({'ids':unique,'counts':counts})
     
@@ -139,8 +182,8 @@ def buildFollowerDataset():
     sn_followed = convertToScreenNames(id_sorted_followed['ids'].tolist())
     id_np_followed = np.array(sn_followed.keys())
     
-    # create input dataframe
-    df = pd.DataFrame(columns=sn_followed.values(), index=sns)
+    # create input dataframe using just these n sn's
+    df = pd.DataFrame(columns=sn_followed.values(), index=df_downsample.index.tolist())
     for i, f in enumerate(filenames):
         temp = np.genfromtxt(f,delimiter=',',dtype='|S32')
         inds = np.where(np.in1d(id_np_followed,temp))[0]
@@ -148,11 +191,12 @@ def buildFollowerDataset():
         row[inds] = 1
         df.iloc[i] = row
 
+    assert df.isnull().values.ravel().sum()==0, "Processed dataframe contains Nulls"
+        
     return df
 
 def saveProcessedData(df): 
     df.to_csv("{}/twitter_party/data/dataframe.csv".format(os.path.expanduser("~")), index=True)
-
 
 if __name__ == '__main__':
 	# while testing:
@@ -165,7 +209,7 @@ if __name__ == '__main__':
     #getFollowers()
     
     # now get most common followers from users and create a dataset for modeling.
-    df = buildFollowerDataset()
-    
-    saveProcessedData(df)
+    #df = buildFollowerDataset()
+    #saveProcessedData(df)
 
+    # model built. Move onto testing.

@@ -15,7 +15,7 @@ def main():
 	# Gather Data
 	###############
 	while True:
-		identifyPoliticalAccounts(count=100)
+		#identifyPoliticalAccounts(count=100)
 
 		# for each account, make a file with a list of their followers' ids
 		getFollowers()
