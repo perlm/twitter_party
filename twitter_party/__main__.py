@@ -13,13 +13,16 @@ def main():
 	###############
 	# Gather Data
 	###############
-	while True:
+	while False:
 		#identifyPoliticalAccounts(count=100)
 
 		# for each account, make a file with a list of their followers' ids
 		getFollowers()
 
 
+	# test set
+	identifyTestAccounts(Term='nba',count=100)
+	getFollowers()
 
 if __name__ == "__main__":
 	main()
