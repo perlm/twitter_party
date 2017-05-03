@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn import preprocessing, feature_extraction, linear_model, metrics, model_selection, ensemble
 import math, glob, datetime, os, pickle
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 
 ####
@@ -172,31 +173,31 @@ def processData(df,scaler=None):
     
     Y = df_downsample[['Party']]
 
-    # scale features
-    #if scaler is None:
-    #    scaler = preprocessing.StandardScaler().fit(X_fix)	#this allows me to re-use the scaler.
-    #    X_scaled = scaler.transform(X_fix) 
-    #else:
-	#    X_scaled = scaler.transform(X_fix) 
+    # To skip scaling
+    # X_scaled = X_fix
     
-    # since I'm only using dummies, I'm going to leave them unscaled.
-    X_scaled = X_fix
+    # scale features
+    if scaler is None:
+        scaler = preprocessing.StandardScaler().fit(X_fix)	#this allows me to re-use the scaler.
+        X_scaled = scaler.transform(X_fix) 
+    else:
+        X_scaled = scaler.transform(X_fix) 
+    
     return X,X_scaled, Y, scaler, X_fix
 
 def readDependentData():
-	file = "{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~"))
-	df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
-	
-    # limit it to dem/rep sample accounts and not test accounts
-    df = df.loc[df['Party'].isin([0,1])]	
-	
-	return df
-	
-	
-def readFollowerData():
-    file = "{}/twitter_party/data/dataframe.csv".format(os.path.expanduser("~"))
+    file = "{}/twitter_party/raw/sns.csv".format(os.path.expanduser("~"))
     df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
     return df
+	
+	
+def readFollowerData(filename):
+    file = "{}/twitter_party/data/{}.csv".format(os.path.expanduser("~"),filename)
+    df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
+    return df
+
+def addrows(df,df_predict):
+    return pd.concat([df,df_predict])
 
 
 if __name__ == '__main__':
@@ -204,7 +205,7 @@ if __name__ == '__main__':
     # load in summary file with screen names
     # and merge it to file with processed follower data
     df_dependent = readDependentData()
-    df_followers = readFollowerData()
+    df_followers = readFollowerData('dataframe')
     df = df_dependent.join(df_followers,how='inner')
     
     X, X_scaled, Y, scaler,X_fix = processData(df)
@@ -216,12 +217,35 @@ if __name__ == '__main__':
     df['y_probs_rf'] = predict(X_scaled,model_rf)
 
     # save model to file.
-    pickle.dump(model_rf,open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"w"))
+    #pickle.dump(model_rf,open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"w"))
 
     # histogram for funsies.
-    #plt.hist(y_probs_rf, 50, normed=1, facecolor='blue', alpha=0.75)
-    #df['y_probs_rf'].hist(bins=50,normed=1,facecolor='blue',alpha=0.75)
-    #df['y_probs_rf'].hist(by=df['Term'],sharex=True,bins=50,normed=1,facecolor='blue',alpha=0.75)
+    while False:
+        plt.hist(df['y_probs_rf'], 25, normed=1, facecolor='blue', alpha=0.75)
+        ax = df['y_probs_rf'].plot(kind='hist',bins=50,normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model')
+        ax.set_xlabel("Predicted Probability Democrat")
+        df['y_probs_rf'].hist(by=df['Term'],sharex=True,bins=50,normed=1,facecolor='blue',alpha=0.75)
+    
+        forPlot = df.pivot(columns='Term',values='y_probs_rf')
+        ax = forPlot.plot.hist(bins=25,normed=1,alpha=0.75,title='Twitter Party Model')
+        ax.set_xlabel("Predicted Probability Democrat")
+    
+    # load in model.
+    #model_rf = pickle.load(open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"r"))
+    
+    df = df.drop('y_probs_rf', 1)
+    
+    df_test_followers = readFollowerData('dataframe_test')
+    df_test = df_dependent.join(df_test_followers,how='inner')
 
-    # apply it to new pop!
-
+    df_all = addrows(df,df_test)
+    X, X_scaled, Y, scaler,X_fix = processData(df_all,scaler)
+    df_all['y_probs_rf'] = predict(X_scaled,model_rf)
+    df_new = df_all.loc[df_all['Term']=='nba']
+    
+    # histogram for funsies.
+    while False:
+        ax = df_new['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
+        ax.set_xlabel("Predicted Probability Democrat")
+        
+    
