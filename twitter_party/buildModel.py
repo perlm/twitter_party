@@ -227,7 +227,7 @@ if __name__ == '__main__':
         df['y_probs_rf'].hist(by=df['Term'],sharex=True,bins=50,normed=1,facecolor='blue',alpha=0.75)
     
         forPlot = df.pivot(columns='Term',values='y_probs_rf')
-        ax = forPlot.plot.hist(bins=25,normed=1,alpha=0.75,title='Twitter Party Model')
+        ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model')
         ax.set_xlabel("Predicted Probability Democrat")
     
     # load in model.

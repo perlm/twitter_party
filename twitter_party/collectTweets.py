@@ -2,7 +2,6 @@ import ConfigParser, datetime, twitter, sys, os, glob, re
 import pandas as pd
 import numpy as np
 
-
 #################################################
 # Collect some tweeters and find their followers!
 #################################################
@@ -11,7 +10,23 @@ import numpy as np
 # account for users following >5k.
 # other independent variables?
 
+def getMostFollowedAccounts():
+    # top 1000 followed accounts. courtesy of http://top-twitter-users.silk.co/explore
+    fil = '{0}/twitter_party/data/top_1000.csv'.format(os.path.expanduser("~"))
+    df = pd.read_csv(fil,delimiter=',')
+    
+    # return as id:sn key pair
+    id_sn = convertToIds(df.Twitter_Handle.tolist())
+    return id_sn
 
+def subsetDict(d):
+    tooPolitical = ['realDonaldTrump','BarackObama','maddow','FoxNews','billmaher','HillaryClinton','StephenAtHome','MichelleObama','WhiteHouse','TheDailyShow','billclinton']
+    d2 = dict(d)
+    for key in d.keys():
+        if d[key] in tooPolitical:
+            del d2[key]
+    return d2
+    
 def tweetLogIn():
     config = ConfigParser.ConfigParser()
     config.read('{}/.python_keys.conf'.format(os.path.expanduser("~")))
@@ -251,15 +266,24 @@ if __name__ == '__main__':
     # for each account, make a file with a list of their followers' ids
     #getFollowers()
     
+    
+    followed_all = getMostFollowedAccounts()
+    followed_sub = subsetDict(followed_all)
+
     # now get most common followers from users and create a dataset for modeling.
     tweeters_political,followed_political, tweeters_test, followed_test = setupFollowerDataset()
 
-    df = buildFollowerDataset(tweeters_political,followed_political)
+
+    #df = buildFollowerDataset(tweeters_political,followed_political)
+    #df = buildFollowerDataset(tweeters_political,followed_test)
+    df = buildFollowerDataset(tweeters_political,followed_sub)
     saveProcessedData(df,'dataframe')
 
-    # temp = df.columns.values.tolist()
-    df_test = buildFollowerDataset(tweeters_test,followed_political)
+    #df_test = buildFollowerDataset(tweeters_test,followed_political)
+    #df_test = buildFollowerDataset(tweeters_test,followed_test)
+    df_test = buildFollowerDataset(tweeters_test,followed_sub)
     saveProcessedData(df_test,'dataframe_test')
     
     
+
 
