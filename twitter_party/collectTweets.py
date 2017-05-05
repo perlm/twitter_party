@@ -273,17 +273,25 @@ if __name__ == '__main__':
     # now get most common followers from users and create a dataset for modeling.
     tweeters_political,followed_political, tweeters_test, followed_test = setupFollowerDataset()
 
-
-    #df = buildFollowerDataset(tweeters_political,followed_political)
-    #df = buildFollowerDataset(tweeters_political,followed_test)
-    df = buildFollowerDataset(tweeters_political,followed_sub)
-    saveProcessedData(df,'dataframe')
-
-    #df_test = buildFollowerDataset(tweeters_test,followed_political)
+    
+    df = buildFollowerDataset(tweeters_political,followed_political)
+    saveProcessedData(df,'dataframe_political_train')
+    df_test = buildFollowerDataset(tweeters_test,followed_political)
+    saveProcessedData(df_test,'dataframe_political_test')
+    
+    
     #df_test = buildFollowerDataset(tweeters_test,followed_test)
+    #saveProcessedData(df_test,'dataframe_test_train')
+    #df = buildFollowerDataset(tweeters_political,followed_test)
+    #saveProcessedData(df,'dataframe_test_test')
+    
+    df = buildFollowerDataset(tweeters_political,followed_sub)
+    saveProcessedData(df,'dataframe_sub_train')
     df_test = buildFollowerDataset(tweeters_test,followed_sub)
-    saveProcessedData(df_test,'dataframe_test')
+    saveProcessedData(df_test,'dataframe_sub_test')
     
-    
-
+    df = buildFollowerDataset(tweeters_political,followed_all)
+    saveProcessedData(df,'dataframe_top_train')
+    df_test = buildFollowerDataset(tweeters_test,followed_all)
+    saveProcessedData(df_test,'dataframe_top_test')
 

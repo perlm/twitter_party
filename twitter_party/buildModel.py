@@ -204,11 +204,20 @@ if __name__ == '__main__':
     
     # load in summary file with screen names
     # and merge it to file with processed follower data
-    df_dependent = readDependentData()
-    df_followers = readFollowerData('dataframe')
-    df = df_dependent.join(df_followers,how='inner')
+
+    df_followers = readFollowerData('dataframe_political_train')
+    df_test_followers = readFollowerData('dataframe_political_test')
     
+    #df_followers = readFollowerData('dataframe_sub_train')
+    #df_test_followers = readFollowerData('dataframe_sub_test')
+    
+    #df_followers = readFollowerData('dataframe_top_train')
+    #df_test_followers = readFollowerData('dataframe_top_test')
+
+    df_dependent = readDependentData()
+    df = df_dependent.join(df_followers,how='inner')
     X, X_scaled, Y, scaler,X_fix = processData(df)
+    
     #model_lr = buildLogisticModel(X_scaled,Y,X_fix,optimize=True)
     #y_probs_lr = predict(X_scaled,model_lr)
     
@@ -217,7 +226,7 @@ if __name__ == '__main__':
     df['y_probs_rf'] = predict(X_scaled,model_rf)
 
     # save model to file.
-    #pickle.dump(model_rf,open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"w"))
+    #pickle.dump(model_rf,open("{}/twitter_party/data/subset1000.model".format(os.path.expanduser("~")),"w"))
 
     # histogram for funsies.
     while False:
@@ -235,7 +244,6 @@ if __name__ == '__main__':
     
     df = df.drop('y_probs_rf', 1)
     
-    df_test_followers = readFollowerData('dataframe_test')
     df_test = df_dependent.join(df_test_followers,how='inner')
 
     df_all = addrows(df,df_test)
@@ -245,7 +253,19 @@ if __name__ == '__main__':
     
     # histogram for funsies.
     while False:
-        ax = df_new['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
+        df_new['followed'] = df_new.sum(axis=1) - df_new['y_probs_rf'] - 3.0
+        1.0*len(df_new[(df_new['followed']>0)])/len(df_new)
+        # 70% for political. 78% for sub
+        
+        df_subset = df_new.loc[df_new['followed']>0]
+        ax = df_subset['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
         ax.set_xlabel("Predicted Probability Democrat")
         
-    
+        
+        fig=plt.figure()
+        ax1=fig.add_subplot(111)
+        ax1.scatter(df_new['followed'],df_new['y_probs_rf'],alpha=0.5,facecolor='blue')
+        ax1.set_ylim([0,1])
+        ax1.set_xlim([0,50])
+        ax1.set_xlabel('Number of Followed in set')
+        ax1.set_xlabel('Predicted Probability')

@@ -22,7 +22,8 @@ def main():
 	# Gather Data to Test Model
 	###############
 	while True:
-		identifyTestAccounts(Term='nba',count=100)
+		#identifyTestAccounts(Term='nba',count=100)
+		identifyTestAccounts(Term='nhl',count=100)
 		getFollowers()
 
 if __name__ == "__main__":
