@@ -149,18 +149,18 @@ def processData(df,scaler=None):
     # this assumes 0>1 in sample. could make more robust? or just add if statement.
 
     # downsample
-    if sum(df['Party']==1) > sum(df['Party']==0):
-        less = 0
-        more = 1
-    else:
-        less = 1
-        more = 0        
-    indices = np.where(df[['Party']] == more)[0]
-    rng = np.random
-    rng.shuffle(indices)
-    n = sum(df['Party']==less)
-    df_downsample = df.drop(df.index[indices[n:]])
-
+    #if sum(df['Party']==1) > sum(df['Party']==0):
+    #    less = 0
+    #    more = 1
+    #else:
+    #    less = 1
+    #    more = 0        
+    #indices = np.where(df[['Party']] == more)[0]
+    #rng = np.random
+    #rng.shuffle(indices)
+    #n = sum(df['Party']==less)
+    #df_downsample = df.drop(df.index[indices[n:]])
+    df_downsample = df
     # df_downsample.Party.value_counts()
 
     # for features, just use whether or not they follow the top n accounts
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     df_all = addrows(df,df_test)
     X, X_scaled, Y, scaler,X_fix = processData(df_all,scaler)
     df_all['y_probs_rf'] = predict(X_scaled,model_rf)
-    df_new = df_all.loc[df_all['Term']=='nba']
+    df_new = df_all.loc[df_all['Party']==3]
     
     # histogram for funsies.
     while False:
@@ -258,8 +258,19 @@ if __name__ == '__main__':
         # 70% for political. 78% for sub
         
         df_subset = df_new.loc[df_new['followed']>0]
-        ax = df_subset['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
+        #ax = df_subset['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
+        #ax.set_xlabel("Predicted Probability Democrat")
+
+        # distribution by term
+        forPlot = df_subset.pivot(columns='Term',values='y_probs_rf')
+        ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model - Test Tweeters')
         ax.set_xlabel("Predicted Probability Democrat")
+        
+        # boxplot
+        ax = df_subset.boxplot(column='y_probs_rf',by='Term')
+        ax.set_xlabel("Tweeter keyword")
+        ax.set_ylabel("Predicted Probability Democrat")
+        ax.set_title("")
         
         
         fig=plt.figure()

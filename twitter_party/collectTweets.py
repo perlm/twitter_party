@@ -201,7 +201,7 @@ def mostFollowedAccounts(tweeters='political'):
     unique, counts = np.unique(ids_followed, return_counts=True)
     id_counts_followed = pd.DataFrame({'ids':unique,'counts':counts})
     
-    limit = 1800
+    limit = 900
     id_sorted_followed = id_counts_followed.sort_values(by=['counts'],ascending=False)[0:limit]
     followed = convertToScreenNames(id_sorted_followed['ids'].tolist())
     return df, followed
