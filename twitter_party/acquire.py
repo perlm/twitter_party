@@ -24,7 +24,8 @@ def main():
 	while True:
 		#identifyTestAccounts(Term='nba',count=100)
 		#identifyTestAccounts(Term='nhl',count=100)
-		identifyTestAccounts(Term='mlb',count=100)
+		#identifyTestAccounts(Term='mlb',count=100)
+		identifyTestAccounts(Term='wwe',count=100)
 		getFollowers()
 
 if __name__ == "__main__":

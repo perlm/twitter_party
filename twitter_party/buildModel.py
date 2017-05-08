@@ -90,11 +90,15 @@ def buildLogisticModel(X_scaled,Y,X_fix,optimize=True):
 	return model
 
 
-def buildRandomForest(X_scaled,Y,X_fix):
+def buildRandomForest(X_scaled,Y,X_fix,W=None):
 	########################
 	# try a random forest model!
 	##########################3
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(X_scaled, Y, test_size=0.3, random_state=0)
+    
+    if W is None:
+        X_train, X_test, y_train, y_test = model_selection.train_test_split(X_scaled, Y, test_size=0.3, random_state=0)
+    else:
+        X_train, X_test, y_train, y_test,w_train,w_test = model_selection.train_test_split(X_scaled, Y, W,test_size=0.3, random_state=0)
     
     # need to reshape for some reason...
     Y = Y.as_matrix()
@@ -108,9 +112,17 @@ def buildRandomForest(X_scaled,Y,X_fix):
     y_test = y_test.as_matrix()
     c, r = y_test.shape
     y_test = y_test.reshape(c,)
+
+    if W is not None:
+        w_train = w_train.as_matrix()
+        w_test = w_test.as_matrix()
     
     rf = ensemble.RandomForestClassifier(n_estimators=1000)
-    rf.fit(X_train, y_train)
+
+    if W is None:
+        rf.fit(X_train, y_train)
+    else:
+        rf.fit(X_train, y_train,sample_weight=w_train)
     
     y_prob = rf.predict_proba(X_test)[:,1]
     y_class = rf.predict(X_test)
@@ -119,7 +131,10 @@ def buildRandomForest(X_scaled,Y,X_fix):
     print "AUC:", metrics.roc_auc_score(y_test, y_prob)
     
     # retrain on whole data set.
-    rf.fit(X_scaled, Y)
+    if W is None:
+        rf.fit(X_scaled, Y)
+    else:
+        rf.fit(X_scaled, Y,sample_weight=W.as_matrix())
     
     importances = list(rf.feature_importances_)
     factors = list(X_fix.columns.values)
@@ -164,7 +179,7 @@ def processData(df,scaler=None):
     # df_downsample.Party.value_counts()
 
     # for features, just use whether or not they follow the top n accounts
-    cols = [col for col in df_downsample.columns if col not in ['Term', 'Party']]
+    cols = [col for col in df_downsample.columns if col not in ['Term', 'Party','followed','weight']]
     X = df_downsample[cols]
     
     # if using multi-level factors - (just dummies for now)
@@ -190,7 +205,6 @@ def readDependentData():
     df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
     return df
 	
-	
 def readFollowerData(filename):
     file = "{}/twitter_party/data/{}.csv".format(os.path.expanduser("~"),filename)
     df = pd.read_csv(file,delimiter=',',index_col=0,header=0)
@@ -200,16 +214,72 @@ def addrows(df,df_predict):
     return pd.concat([df,df_predict])
 
 
-if __name__ == '__main__':
+def model_covariate_shift():
+    df_followers = readFollowerData('dataframe_political_train')
+    df_test_followers = readFollowerData('dataframe_political_test')
+    df_dependent = readDependentData()
+    df = df_dependent.join(df_followers,how='inner')
+    df_test = df_dependent.join(df_test_followers,how='inner')
+    df_all = addrows(df,df_test)
+    df_all['followed'] = df_all.sum(axis=1) - df_all['Party']
     
+    forPlot = df_all.pivot(columns='Party',values='followed')
+    ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model - Covariate Shift')
+    ax.set_xlabel("Number of Input Accounts Followed")
+
+    df_all = df_all.drop('followed', 1)
+
+    df['followed'] = df.sum(axis=1) - df['Party']
+    df_test['followed'] = df_test.sum(axis=1) - df_test['Party']
+
+    # calc weighting using 1d # of accounts followed.
+    t1 = df.groupby(['followed']).size()/len(df)
+    t2 = df_test.groupby(['followed']).size()/len(df_test)
+    t3 = t2/t1
+    t3 = t3.fillna(0)
+    
+    df_weighted = df.merge(t3.to_frame(),left_on='followed',right_index=True)
+    df_weighted.columns.values[-1] = 'weight'
+    df_weighted.rename(columns={0:'weight'}, inplace=True)
+
+    X, X_scaled, Y, scaler,X_fix = processData(df_weighted)
+    model_rf = buildRandomForest(X_scaled,Y,X_fix,df_weighted['weight'])
+    
+    df_weighted['y_probs_rf'] = predict(X_scaled,model_rf)
+    
+    # distribution by term
+    forPlot = df_weighted.pivot(columns='Term',values='y_probs_rf')
+    ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model - Covariate Shift Adaptation')
+    ax.set_xlabel("Predicted Probability Democrat")
+
+    X, X_scaled, Y, scaler,X_fix = processData(df_all,scaler)
+    df_all['y_probs_rf'] = predict(X_scaled,model_rf)
+    df_new = df_all.loc[df_all['Party']==3]
+
+    df_new['followed'] = df_new.sum(axis=1) - df_new['y_probs_rf'] - df_new['Party']
+    df_subset = df_new.loc[df_new['followed']>0]
+
+    # distribution by term
+    forPlot = df_subset.pivot(columns='Term',values='y_probs_rf')
+    ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model - Test Tweeters')
+    ax.set_xlabel("Predicted Probability Democrat")
+        
+        # boxplot
+        ax = df_subset.boxplot(column='y_probs_rf',by='Term')
+        ax.set_xlabel("Tweeter keyword")
+        ax.set_ylabel("Predicted Probability Democrat")
+        ax.set_title("")
+
+
+def original_model_workflow():    
     # load in summary file with screen names
     # and merge it to file with processed follower data
 
-    #df_followers = readFollowerData('dataframe_political_train')
-    #df_test_followers = readFollowerData('dataframe_political_test')
+    df_followers = readFollowerData('dataframe_political_train')
+    df_test_followers = readFollowerData('dataframe_political_test')
     
-    df_followers = readFollowerData('dataframe_sub_train')
-    df_test_followers = readFollowerData('dataframe_sub_test')
+    #df_followers = readFollowerData('dataframe_sub_train')
+    #df_test_followers = readFollowerData('dataframe_sub_test')
     
     #df_followers = readFollowerData('dataframe_top_train')
     #df_test_followers = readFollowerData('dataframe_top_test')
@@ -220,6 +290,9 @@ if __name__ == '__main__':
     
     #model_lr = buildLogisticModel(X_scaled,Y,X_fix,optimize=True)
     #y_probs_lr = predict(X_scaled,model_lr)
+    
+    # df['followed'] = df.sum(axis=1) - df['Party']
+    #1.0*len(df[(df['followed']>0)])/len(df)
     
     # rf is slightly more accurate, but slightly lower AUC, well not really.
     model_rf = buildRandomForest(X_scaled,Y,X_fix)
@@ -304,3 +377,6 @@ if __name__ == '__main__':
     ax1.set_ylabel('Predicted Probability 2')
 
 
+    
+if __name__ == '__main__':
+    print "not set up"
