@@ -205,11 +205,11 @@ if __name__ == '__main__':
     # load in summary file with screen names
     # and merge it to file with processed follower data
 
-    df_followers = readFollowerData('dataframe_political_train')
-    df_test_followers = readFollowerData('dataframe_political_test')
+    #df_followers = readFollowerData('dataframe_political_train')
+    #df_test_followers = readFollowerData('dataframe_political_test')
     
-    #df_followers = readFollowerData('dataframe_sub_train')
-    #df_test_followers = readFollowerData('dataframe_sub_test')
+    df_followers = readFollowerData('dataframe_sub_train')
+    df_test_followers = readFollowerData('dataframe_sub_test')
     
     #df_followers = readFollowerData('dataframe_top_train')
     #df_test_followers = readFollowerData('dataframe_top_test')
@@ -245,7 +245,6 @@ if __name__ == '__main__':
     df = df.drop('y_probs_rf', 1)
     
     df_test = df_dependent.join(df_test_followers,how='inner')
-
     df_all = addrows(df,df_test)
     X, X_scaled, Y, scaler,X_fix = processData(df_all,scaler)
     df_all['y_probs_rf'] = predict(X_scaled,model_rf)
@@ -255,7 +254,7 @@ if __name__ == '__main__':
     while False:
         df_new['followed'] = df_new.sum(axis=1) - df_new['y_probs_rf'] - 3.0
         1.0*len(df_new[(df_new['followed']>0)])/len(df_new)
-        # 70% for political. 78% for sub
+        # 65% for political. 77% for sub
         
         df_subset = df_new.loc[df_new['followed']>0]
         #ax = df_subset['y_probs_rf'].plot(kind='hist',bins=25,xlim=[0,1],normed=1,facecolor='blue',alpha=0.75,title='Twitter Party Model - NBA Tweeters')
@@ -280,3 +279,28 @@ if __name__ == '__main__':
         ax1.set_xlim([0,50])
         ax1.set_xlabel('Number of Followed in set')
         ax1.set_xlabel('Predicted Probability')
+
+
+    df_test = df_dependent.join(df_test_followers,how='inner')
+    df_all = addrows(df,df_test)
+    X, X_scaled, Y, scaler,X_fix = processData(df_all,scaler)
+    df_all['y_probs_rf_2'] = predict(X_scaled,model_rf)
+    df_new_2 = df_all.loc[df_all['Party']==3]
+    
+    df_new['y_probs_rf_2'] = df_new_2['y_probs_rf_2']
+    df_new['followed'] = df_new.sum(axis=1) - df_new_3['y_probs_rf'] - df_new_3['y_probs_rf_2']
+        1.0*len(df_new[(df_new['followed']>0)])/len(df_new)
+        # 65% for political. 77% for sub
+        
+        df_subset = df_new.loc[df_new['followed']>0]
+    
+    
+    fig=plt.figure()
+    ax1=fig.add_subplot(111)
+    ax1.hexbin(df_new_3['y_probs_rf'],df_new_3['y_probs_rf_2'],gridsize=20)
+    ax1.set_ylim([0,1])
+    ax1.set_xlim([0,1])
+    ax1.set_xlabel('Predicted Probability 1')
+    ax1.set_ylabel('Predicted Probability 2')
+
+
