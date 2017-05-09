@@ -1,7 +1,7 @@
 from .collectTweets import *
 from .buildModel import *
 from .responsive import *
-import pickle
+import pickle, bz2
 import numpy as np
 import pandas as pd
 
@@ -44,15 +44,18 @@ def main():
 		df = df_dependent.join(df_followers,how='inner')
 		X, X_scaled, Y, scaler,X_fix = processData(df)
 		model_rf = buildRandomForest(X_scaled,Y,X_fix)
-		# save model and scaler to file
-		#pickle.dump(model_rf,open("{}/twitter_party/data/model.model".format(os.path.expanduser("~")),"w"))
+		# save model and scaler to compressed file
+		#with bz2.BZ2File("{}/twitter_party/model_pickles/model.model".format(os.path.expanduser("~")),"w") as f:
+		# pickle.dump(mmodel, f)
 
 	################
 	# Responsive tweeting
 	################3
 	if True:
-		model_1 = pickle.load(open("{}/twitter_party/model_pickles/political.model".format(os.path.expanduser("~")),"r"))
-		model_2 = pickle.load(open("{}/twitter_party/model_pickles/sub1000.model".format(os.path.expanduser("~")),"r"))
+		with bz2.BZ2File("{}/twitter_party/model_pickles/political.model".format(os.path.expanduser("~")),"r") as f:
+			model_1 = pickle.load(f)
+		with bz2.BZ2File("{}/twitter_party/model_pickles/sub1000.model".format(os.path.expanduser("~")),"r") as f:
+			model_2 = pickle.load(f)
 		scaler_1 = pickle.load(open("{}/twitter_party/model_pickles/political.scaler".format(os.path.expanduser("~")),"r"))
 		scaler_2 = pickle.load(open("{}/twitter_party/model_pickles/sub1000.scaler".format(os.path.expanduser("~")),"r"))
 
