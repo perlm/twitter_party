@@ -83,9 +83,9 @@ def getFollowers():
         fil2 = '{0}/twitter_party/raw/{1}.csv'.format(os.path.expanduser("~"),row['SN'])
         if not os.path.isfile(fil2):
             try:
-	    	tmp = t.friends.ids(screen_name=row['SN'])
-            	dftemp = pd.DataFrame({'ids':tmp['ids']})
-            	dftemp.to_csv(fil2, header=False,index=False)
+                tmp = t.friends.ids(screen_name=row['SN'])
+                dftemp = pd.DataFrame({'ids':tmp['ids']})
+                dftemp.to_csv(fil2, header=False,index=False)
 	    except:
 		print "Fail for: ", row
 

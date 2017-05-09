@@ -148,7 +148,8 @@ def buildRandomForest(X_scaled,Y,X_fix,W=None):
 def predict(X_scaled,model):
 	# for a given model and independent data, generate predictions
 	y_prob = model.predict_proba(X_scaled)[:,1]
-	print "Avg of predictions= ", np.mean(y_prob)
+	if len(X_scaled)>100:
+	    print "Avg of predictions= ", np.mean(y_prob)
 	return y_prob
 
 	
@@ -186,7 +187,10 @@ def processData(df,scaler=None):
     # X_fix = pd.get_dummies(X)
     X_fix = X
     
-    Y = df_downsample[['Party']]
+    try:
+        Y = df_downsample[['Party']]
+    except:
+        Y = None
 
     # To skip scaling
     # X_scaled = X_fix
@@ -264,22 +268,22 @@ def model_covariate_shift():
     ax = forPlot.plot.hist(bins=25,stacked=True,normed=1,alpha=0.75,title='Twitter Party Model - Test Tweeters')
     ax.set_xlabel("Predicted Probability Democrat")
         
-        # boxplot
-        ax = df_subset.boxplot(column='y_probs_rf',by='Term')
-        ax.set_xlabel("Tweeter keyword")
-        ax.set_ylabel("Predicted Probability Democrat")
-        ax.set_title("")
+    # boxplot
+    ax = df_subset.boxplot(column='y_probs_rf',by='Term')
+    ax.set_xlabel("Tweeter keyword")
+    ax.set_ylabel("Predicted Probability Democrat")
+    ax.set_title("")
 
 
 def original_model_workflow():    
     # load in summary file with screen names
     # and merge it to file with processed follower data
 
-    df_followers = readFollowerData('dataframe_political_train')
-    df_test_followers = readFollowerData('dataframe_political_test')
+    #df_followers = readFollowerData('dataframe_political_train')
+    #df_test_followers = readFollowerData('dataframe_political_test')
     
-    #df_followers = readFollowerData('dataframe_sub_train')
-    #df_test_followers = readFollowerData('dataframe_sub_test')
+    df_followers = readFollowerData('dataframe_sub_train')
+    df_test_followers = readFollowerData('dataframe_sub_test')
     
     #df_followers = readFollowerData('dataframe_top_train')
     #df_test_followers = readFollowerData('dataframe_top_test')
@@ -299,7 +303,9 @@ def original_model_workflow():
     df['y_probs_rf'] = predict(X_scaled,model_rf)
 
     # save model to file.
-    #pickle.dump(model_rf,open("{}/twitter_party/data/subset1000.model".format(os.path.expanduser("~")),"w"))
+    #pickle.dump(model_rf,open("{}/twitter_party/model_pickles/sub1000.model".format(os.path.expanduser("~")),"w"))
+    #pickle.dump(scaler1,open("{}/twitter_party/model_pickles/political.scaler".format(os.path.expanduser("~")),"w"))
+    #pickle.dump(scaler2,open("{}/twitter_party/model_pickles/sub1000.scaler".format(os.path.expanduser("~")),"w"))
 
     # histogram for funsies.
     while False:
@@ -362,11 +368,10 @@ def original_model_workflow():
     
     df_new['y_probs_rf_2'] = df_new_2['y_probs_rf_2']
     df_new['followed'] = df_new.sum(axis=1) - df_new_3['y_probs_rf'] - df_new_3['y_probs_rf_2']
-        1.0*len(df_new[(df_new['followed']>0)])/len(df_new)
-        # 65% for political. 77% for sub
+    1.0*len(df_new[(df_new['followed']>0)])/len(df_new)
+    # 65% for political. 77% for sub
         
-        df_subset = df_new.loc[df_new['followed']>0]
-    
+    df_subset = df_new.loc[df_new['followed']>0]
     
     fig=plt.figure()
     ax1=fig.add_subplot(111)
