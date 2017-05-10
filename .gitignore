@@ -8,5 +8,4 @@ build/
 *.png
 
 # inessential data
-*.csv
 *.rem
