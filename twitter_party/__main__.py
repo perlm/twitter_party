@@ -67,7 +67,7 @@ def main():
 		followers1 = convertToIds(followers1.tolist())
 		followers2 = convertToIds(followers2.tolist())
 
-		fil = '{}/twitter_party/log/responses.csv'.format(os.path.expanduser("~"))
+		fil = '{}/twitter_party/log/responses.log'.format(os.path.expanduser("~"))
 		ats = getAts()
     
 		prob=None

@@ -23,7 +23,7 @@ def getAts():
 
     ats = list(set(ats))
     df_ats = pd.DataFrame({'users':ats,'score':0})
-    fil = '{}/twitter_party/log/responses.csv'.format(os.path.expanduser("~"))
+    fil = '{}/twitter_party/log/responses.log'.format(os.path.expanduser("~"))
     #df_ats.to_csv(fil, header=True,index=False) # to initialize
 
     old = pd.read_csv(fil,delimiter=',',header=0)
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     followers1 = convertToIds(followers1.tolist())
     followers2 = convertToIds(followers2.tolist())
     
-    fil = '{}/twitter_party/log/responses.csv'.format(os.path.expanduser("~"))
+    fil = '{}/twitter_party/log/responses.log'.format(os.path.expanduser("~"))
     
     # get new 
     ats = getAts()

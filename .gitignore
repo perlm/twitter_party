@@ -9,5 +9,3 @@ build/
 
 # data
 *.csv
-*.scaler
-*.model
