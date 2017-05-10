@@ -7,5 +7,6 @@ build/
 # images
 *.png
 
-# data
+# inessential data
 *.csv
+*.rem
